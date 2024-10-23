@@ -1,11 +1,6 @@
--- Count number of patient resources
+-- Count number of distinct patient resources and distinct UPIDs from the patient table
 SELECT 
-    COUNT(DISTINCT(ID)) AS number_patient_resources
-FROM
-    PATIENT;
-
--- Count number of distinct patients / UPIDs
-SELECT 
-    COUNT(DISTINCT(UPID)) AS number_distinct_patients
+    COUNT(DISTINCT(ID)) AS count_patient_resources,
+    COUNT(DISTINCT(UPID)) AS count_upids
 FROM
     PATIENT;
