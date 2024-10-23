@@ -1,6 +1,6 @@
 SELECT 
     DATA_SOURCE, 
-COUNT(DISTINCT(UPID)) as number_patients
+    COUNT(DISTINCT(UPID)) as number_patients
 FROM
     PATIENT
 GROUP BY 
