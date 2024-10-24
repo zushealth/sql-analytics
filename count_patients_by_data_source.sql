@@ -1,3 +1,4 @@
+-- Count number of distinct patient resources by data source in the patient table 
 SELECT 
     DATA_SOURCE, 
     COUNT(DISTINCT(UPID)) as number_patients
