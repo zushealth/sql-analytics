@@ -1,4 +1,4 @@
--- Count number of distinct patients (UPIDs) by SNOMED-coded condition
+-- Count number of distinct patients (UPIDs) by SNOMED-coded condition 
 SELECT 
   CODE_SNOMED,
   CODE_DISPLAY,
