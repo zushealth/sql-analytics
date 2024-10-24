@@ -1,4 +1,4 @@
--- Count number of distinct patients (UPIDs) in each age bucket
+-- Count number of distinct patients (UPIDs) in each age bracket
 SELECT
     CASE 
         WHEN DATEDIFF('year', BIRTH_DATE, CURRENT_DATE) BETWEEN 0 AND 4 THEN '0-4'
@@ -13,9 +13,9 @@ SELECT
         WHEN DATEDIFF('year', BIRTH_DATE, CURRENT_DATE) BETWEEN 75 AND 84 THEN '75-84'
         WHEN DATEDIFF('year', BIRTH_DATE, CURRENT_DATE) >= 85 THEN '85+'
         ELSE 'N/A'
-    END AS age_bucket,
+    END AS age_bracket,
     COUNT(DISTINCT UPID) AS patient_count
 FROM 
     PATIENT
 GROUP BY 
-    age_bucket;
+    age_bracket;
