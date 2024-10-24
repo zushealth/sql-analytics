@@ -1,41 +1,41 @@
 -- Query to identify patients with recent a ED visit
 SELECT 
-    CONCAT('https://app.zushealth.com/patients/', t.upid, '/aggregated-profile') AS zus_app_link,
-    t.period_start, 
-    t.period_end,
-    l.name AS location_name,
-    dd.display AS discharge_disposition,
-    ARRAY_AGG(DISTINCT c.code_display) AS conditions,
+    CONCAT('https://app.zushealth.com/patients/', t.UPID, '/aggregated-profile') AS ZUS_APP_LINK,
+    t.PERIOD_START, 
+    t.PERIOD_END,
+    l.NAME AS location_name,
+    dd.DISPLAY AS discharge_disposition,
+    ARRAY_AGG(DISTINCT c.CODE_DISPLAY) AS conditions,
     CASE 
-        WHEN am.document_reference_id IS NOT NULL THEN TRUE 
+        WHEN am.DOCUMENT_REFERENCE_ID IS NOT NULL THEN TRUE 
         ELSE FALSE 
     END AS documentation_available
 FROM 
-    lens_transition_of_care AS t
+    LENS_TRANSITION_OF_CARE AS t
 JOIN 
-    location AS l 
-    ON t.admitting_location_id = l.id
-    AND t.encounter_class_code = 'EMER'
-    AND t.period_start >= DATEADD(MONTH, -12, CURRENT_DATE())
-    AND TO_DATE(t.period_start) <= CURRENT_DATE()
+    LOCATION AS l 
+    ON t.ADMITTING_LOCATION_ID = l.ID
+    AND t.ENCOUNTER_CLASS_CODE = 'EMER'
+    AND t.PERIOD_START >= DATEADD(MONTH, -12, CURRENT_DATE())
+    AND TO_DATE(t.PERIOD_START) <= CURRENT_DATE()
 LEFT JOIN 
-    lens_transition_of_care_diagnosis AS d 
-    ON d.lens_transition_of_care_id = t.id
+    LENS_TRANSITION_OF_CARE_DIAGNOSIS AS d 
+    ON d.LENS_TRANSITION_OF_CARE_ID = t.ID
 LEFT JOIN 
-    lens_snomed_condition AS c 
-    ON c.id = d.condition_id
+    LENS_SNOMED_CONDITION AS c 
+    ON c.ID = d.CONDITION_ID
 LEFT JOIN 
-    lens_transition_of_care_discharge_disposition AS dd 
-    ON t.lens_transition_of_care_discharge_disposition_id = dd.id
+    LENS_TRANSITION_OF_CARE_DISCHARGE_DISPOSITION AS dd 
+    ON t.LENS_TRANSITION_OF_CARE_DISCHARGE_DISPOSITION_ID = dd.ID
 LEFT JOIN 
-    lens_transition_of_care_adt_message AS am 
-    ON am.lens_transition_of_care_id = t.id
+    LENS_TRANSITION_OF_CARE_ADT_MESSAGE AS am 
+    ON am.LENS_TRANSITION_OF_CARE_ID = t.ID
 GROUP BY 
-    CONCAT('https://app.zushealth.com/patients/', t.upid, '/aggregated-profile'), 
-    t.period_start, 
-    t.period_end, 
-    l.name, 
-    dd.display, 
-    documentation_available
+    CONCAT('https://app.zushealth.com/patients/', t.UPID, '/aggregated-profile'), 
+    t.PERIOD_START, 
+    t.PERIOD_END, 
+    l.NAME, 
+    dd.DISPLAY, 
+    DOCUMENTATION_AVAILABLE
 ORDER BY 
-    t.period_start DESC;
+    t.PERIOD_START DESC;
