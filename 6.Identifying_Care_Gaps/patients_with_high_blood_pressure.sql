@@ -1,4 +1,4 @@
--- Query to identify patients with high blood pressure
+-- Query to identify patients with high blood pressure (<140/90 mmHg)
 SELECT 
     DISTINCT O.UPID,
     O.EFFECTIVE_START, 
@@ -40,4 +40,13 @@ WHERE
 GROUP BY 
     O.UPID, 
     O.EFFECTIVE_START, 
-    O.EFFECTIVE_END;
+    O.EFFECTIVE_END
+HAVING 
+    MAX(CASE 
+        WHEN CODE_LOINC IN ('8480-6', '8479-8', '8459-0', '8460-8') 
+        THEN VALUE_QUANTITY_VALUE 
+    END) > 140
+    AND MAX(CASE 
+        WHEN CODE_LOINC IN ('8462-4', '8453-3', '8454-1') 
+        THEN VALUE_QUANTITY_VALUE 
+    END) > 90;
