@@ -1,5 +1,6 @@
 -- Query to identify patients with recent a ED visit
 SELECT 
+    t.UPID,
     CONCAT('https://app.zushealth.com/patients/', t.UPID, '/aggregated-profile') AS ZUS_APP_LINK,
     t.PERIOD_START, 
     t.PERIOD_END,
@@ -31,6 +32,7 @@ LEFT JOIN
     LENS_TRANSITION_OF_CARE_ADT_MESSAGE AS am 
     ON am.LENS_TRANSITION_OF_CARE_ID = t.ID
 GROUP BY 
+    t.UPID,
     CONCAT('https://app.zushealth.com/patients/', t.UPID, '/aggregated-profile'), 
     t.PERIOD_START, 
     t.PERIOD_END, 
