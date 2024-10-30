@@ -29,7 +29,6 @@ WITH PROCESSED_EMAILS AS (
 , FIRST_PARTY_EMAILS AS (
     SELECT 
         UPID,
-        ARRAY_UNIQUE_AGG(EMAIL_USE) AS email_use,
         ARRAY_UNIQUE_AGG(EMAIL_ADDRESS) AS email_addresses
     FROM PROCESSED_EMAILS
     WHERE DATA_SOURCE IS NULL
@@ -38,7 +37,6 @@ WITH PROCESSED_EMAILS AS (
 THIRD_PARTY_EMAILS AS (
     SELECT 
         UPID,
-        ARRAY_UNIQUE_AGG(email_use) AS email_use,
         EMAIL_ADDRESS,
         EMAIL_RECORDED_DATE,
         RANK() OVER (PARTITION BY UPID, EMAIL_ADDRESS ORDER BY EMAIL_RECORDED_DATE DESC NULLS LAST) AS recency_rank
@@ -48,14 +46,12 @@ THIRD_PARTY_EMAILS AS (
     QUALIFY recency_rank = 1
 )
 SELECT 
-    fp.UPID AS UPID,
-    tp.EMAIL_USE AS third_party_email_use,
+    tp.UPID AS UPID,
     tp.EMAIL_ADDRESS AS third_party_email_address,
     tp.EMAIL_RECORDED_DATE AS third_party_email_recorded_date,
-    fp.EMAIL_USE AS first_party_phone_use,
-    fp.EMAIL_ADDRESSES AS first_party_phone_numbers
+    fp.EMAIL_ADDRESSES AS first_party_email_addresses
 FROM THIRD_PARTY_EMAILS tp
 LEFT JOIN FIRST_PARTY_EMAILS fp
 ON fp.UPID = tp.UPID
-AND NOT ARRAY_CONTAINS(tp.EMAIL_ADDRESS::variant, fp.email_addresses)
+WHERE NOT ARRAY_CONTAINS(third_party_email_address::variant, first_party_email_addresses)
 ORDER BY fp.UPID, tp.EMAIL_RECORDED_DATE DESC NULLS LAST;
