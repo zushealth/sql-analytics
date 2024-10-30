@@ -6,11 +6,7 @@ SELECT
     t.PERIOD_END,
     l.NAME AS location_name,
     dd.DISPLAY AS discharge_disposition,
-    ARRAY_AGG(DISTINCT c.CODE_DISPLAY) AS conditions,
-    CASE 
-        WHEN am.DOCUMENT_REFERENCE_ID IS NOT NULL THEN TRUE 
-        ELSE FALSE 
-    END AS documentation_available
+    ARRAY_AGG(DISTINCT c.CODE_DISPLAY) AS conditions
 FROM 
     LENS_TRANSITION_OF_CARE AS t
 JOIN 
@@ -37,7 +33,6 @@ GROUP BY
     t.PERIOD_START, 
     t.PERIOD_END, 
     l.NAME, 
-    dd.DISPLAY, 
-    DOCUMENTATION_AVAILABLE
+    dd.DISPLAY
 ORDER BY 
     t.PERIOD_START DESC;
