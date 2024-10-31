@@ -1,41 +1,80 @@
--- Query to identify HCC recapture opportunities
-WITH HCC AS (
-  SELECT 
-    UPID, 
-    COUNT(DISTINCT CODE_HCC) AS hcc_count, 
-    MIN(last_recorded) AS oldest_recorded_date, 
-    MAX(last_recorded) AS latest_recorded_date, 
-    COUNT(CASE WHEN DATEDIFF(YEAR, last_recorded, CURRENT_DATE()) < 2 THEN 1 END) AS hcc_count_within_2_years,
-    MAX(CASE WHEN CODE_HCC IN ('17', '18', '19') THEN last_recorded END) AS diabetes_last_recorded,
-    MAX(CASE WHEN CODE_HCC IN ('84', '85', '86', '87', '88', '96') THEN last_recorded END) AS cardiovascular_last_recorded,
-    MAX(CASE WHEN CODE_HCC IN ('8', '9', '10', '11', '12') THEN last_recorded END) AS cancer_last_recorded,
-    LISTAGG(CASE WHEN DATEDIFF(YEAR, last_recorded, CURRENT_DATE()) < 2 THEN CODE_HCC END, ', ') AS compliant_hccs,
-    LISTAGG(CASE WHEN DATEDIFF(YEAR, last_recorded, CURRENT_DATE()) > 1 THEN CODE_HCC END, ', ') AS noncompliant_hccs
-  FROM (
-    SELECT 
-      UPID, 
-      CODE_HCC,
-      MAX(
-        CASE 
-          WHEN LENGTH(CAST(RECORDED_DATE AS VARCHAR)) = 7 
-            THEN TO_DATE(CAST(RECORDED_DATE AS VARCHAR) || '-01', 'YYYY-MM-DD')
-          ELSE DATE_TRUNC('day', RECORDED_DATE)
-        END
-      ) AS last_recorded
-    FROM LENS_SNOMED_CONDITION C
-    GROUP BY UPID, CODE_HCC
-  ) AS subquery
-  GROUP BY UPID
+
+-- Step 1: Identify HCC codes found by first-party and the third-party sources for each patient (UPID)
+WITH FIRST_PARTY_HCCS AS (
+    SELECT
+        UPID,
+        CODE_HCC
+    FROM
+        CONDITION
+    WHERE
+        DATA_SOURCE IS NULL
+        AND CODE_HCC IS NOT NULL
+    GROUP BY 
+        UPID,
+        CODE_HCC
+), THIRD_PARTY_HCCS AS (
+    SELECT
+        UPID,
+        CODE_HCC
+    FROM
+        CONDITION
+    WHERE
+        DATA_SOURCE IS NOT NULL
+        AND CODE_HCC IS NOT NULL
+    GROUP BY 
+        UPID,
+        CODE_HCC
+),
+-- Step 2: Identify HCC codes that are found only by third-party sources for each patient
+THIRD_PARTY_ONLY_HCCS AS (
+    SELECT
+        tp.UPID,
+        tp.CODE_HCC,
+    FROM
+        THIRD_PARTY_HCCS tp
+    LEFT JOIN FIRST_PARTY_HCCS fp
+        ON tp.UPID = fp.UPID 
+        AND tp.CODE_HCC = fp.CODE_HCC
+    WHERE
+        fp.CODE_HCC IS NULL
+),
+-- Step 3: Count distinct HCCs per patient from both third and first-party sources
+PATIENT_HCC_COUNTS AS (
+    SELECT
+        UPID,
+        COUNT(DISTINCT CASE WHEN DATA_SOURCE IS NULL THEN CODE_HCC END) AS FIRST_PARTY_HCC_COUNT,
+        COUNT(DISTINCT CASE WHEN DATA_SOURCE IS NOT NULL THEN CODE_HCC END) AS THIRD_PARTY_HCC_COUNT
+    FROM
+        CONDITION
+    WHERE CODE_HCC IS NOT NULL
+    GROUP BY
+        UPID
+),
+-- Step 4: Count the new condition count per patient
+NEW_CONDITIONS_AGG AS (
+    SELECT
+        UPID,
+        COUNT(DISTINCT CODE_HCC) AS NEW_HCC_COUNT
+    FROM
+        THIRD_PARTY_ONLY_HCCS
+    GROUP BY
+        UPID
 )
+-- Step 5: Combine the aggregated results with the net new HCC codes and list them
 SELECT
-    UPID, 
-    CONCAT('https://app.zushealth.com/patients/', UPID, '/conditions') AS zus_app_link, 
-    DIABETES_LAST_RECORDED,
-    CARDIOVASCULAR_LAST_RECORDED,
-    CANCER_LAST_RECORDED,
-    HCC_COUNT, 
-    HCC_COUNT_WITHIN_2_YEARS,
-    COMPLIANT_HCCs AS captured_hccs,
-    NONCOMPLIANT_HCCS AS uncaptured_hccs
-FROM HCC
-WHERE hcc_count - hcc_count_within_2_years > 0;
+    phc.UPID,
+    CONCAT('https://app.zushealth.com/patients/',phc.UPID, '/conditions') AS ZusAppLink,
+    phc.FIRST_PARTY_HCC_COUNT,
+    phc.THIRD_PARTY_HCC_COUNT,
+    COALESCE(nca.NEW_HCC_COUNT, 0) AS NEW_HCC_COUNT,
+    LISTAGG(DISTINCT tpo.CODE_HCC, ', ') WITHIN GROUP (ORDER BY tpo.CODE_HCC) AS NEW_HCC_CODES,
+FROM
+    PATIENT_HCC_COUNTS phc
+LEFT JOIN
+    NEW_CONDITIONS_AGG nca ON phc.UPID = nca.UPID
+LEFT JOIN
+    THIRD_PARTY_ONLY_HCCS tpo ON phc.UPID = tpo.UPID
+GROUP BY
+    phc.UPID, phc.FIRST_PARTY_HCC_COUNT, phc.THIRD_PARTY_HCC_COUNT, nca.NEW_HCC_COUNT
+ORDER BY
+    FIRST_PARTY_HCC_COUNT DESC NULLS LAST;
