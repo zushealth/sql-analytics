@@ -62,7 +62,7 @@ HCC_OPPORTUNITY_AGG AS (
     GROUP BY
         UPID
 )
--- Step 5: Combine the zaggregated results with the HCC opportunity codes and list them
+-- Step 5: Combine the aggregated results with the HCC opportunity codes and list them
 SELECT
     phc.UPID,
     CONCAT('https://app.zushealth.com/patients/',phc.UPID, '/conditions') AS ZusAppLink,
